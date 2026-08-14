@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl } from "@/lib/site-url";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7) + "-01";
@@ -27,14 +28,24 @@ export default async function DashboardOverviewPage() {
     .eq("period_month", currentPeriod())
     .maybeSingle();
 
+  const { count: knowledgeCount } = await supabase
+    .from("knowledge_items")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", business.id);
+
   const used = usage?.conversations_count ?? 0;
   const included = business.conversations_included;
   const percent = Math.min(100, Math.round((used / included) * 100));
+  const hasKnowledge = (knowledgeCount ?? 0) > 0;
+  const hasConversation = used > 0;
 
-  const widgetUrl =
-    (process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.com") +
-    "/widget/" +
-    business.slug;
+  const widgetUrl = getSiteUrl() + "/widget/" + business.slug;
+
+  const checklist = [
+    { label: "Create your business", done: true },
+    { label: "Add your first product, FAQ, or policy", done: hasKnowledge, href: "/dashboard/knowledge" },
+    { label: "Get your first customer conversation", done: hasConversation },
+  ];
 
   return (
     <div className="max-w-3xl">
@@ -42,6 +53,36 @@ export default async function DashboardOverviewPage() {
       <p className="mb-8 text-sm text-ink-muted">
         Here's how {business.name}'s AI assistant is doing this month.
       </p>
+
+      {!hasKnowledge && (
+        <div className="card mb-6 p-6">
+          <span className="mb-3 block text-xs uppercase tracking-widest text-ink-muted">
+            Getting started
+          </span>
+          <ul className="space-y-2.5">
+            {checklist.map((item) => (
+              <li key={item.label} className="flex items-center gap-2.5 text-sm">
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${
+                    item.done ? "bg-teal text-paper" : "border border-line text-transparent"
+                  }`}
+                >
+                  ✓
+                </span>
+                {item.href && !item.done ? (
+                  <a href={item.href} className="text-ink underline underline-offset-2">
+                    {item.label}
+                  </a>
+                ) : (
+                  <span className={item.done ? "text-ink-muted line-through" : "text-ink"}>
+                    {item.label}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Signature element: the usage ledger */}
       <div className="card mb-6 p-6">

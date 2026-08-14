@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { addKnowledgeItem } from "@/lib/actions";
+import SubmitButton from "@/components/submit-button";
 import KnowledgeList from "./knowledge-list";
 
-export default async function KnowledgePage() {
+export default async function KnowledgePage({
+  searchParams,
+}: {
+  searchParams: { error?: string; success?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -30,6 +35,17 @@ export default async function KnowledgePage() {
       <p className="mb-8 text-sm text-ink-muted">
         Everything here is what your AI knows and will tell customers. Nothing else.
       </p>
+
+      {searchParams.success && (
+        <p className="mb-4 rounded-sm border border-teal/30 bg-teal-dim px-3.5 py-2.5 text-sm text-teal">
+          {searchParams.success}
+        </p>
+      )}
+      {searchParams.error && (
+        <p className="mb-4 rounded-sm border border-gold/40 bg-gold-dim px-3.5 py-2.5 text-sm text-ink">
+          {searchParams.error}
+        </p>
+      )}
 
       <form action={addKnowledgeItem} className="card mb-8 space-y-4 p-6">
         <input type="hidden" name="business_id" value={business.id} />
@@ -74,9 +90,9 @@ export default async function KnowledgePage() {
           </label>
           <input className="field-input" id="price" name="price" type="number" step="0.01" min="0" />
         </div>
-        <button type="submit" className="btn-primary">
+        <SubmitButton pendingText="Adding..." className="btn-primary">
           Add to AI knowledge
-        </button>
+        </SubmitButton>
       </form>
 
       <KnowledgeList items={items ?? []} />
