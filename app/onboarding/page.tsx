@@ -1,4 +1,5 @@
 import { createBusiness } from "@/lib/actions";
+import SubmitButton from "@/components/submit-button";
 
 export default function OnboardingPage({
   searchParams,
@@ -45,9 +46,7 @@ export default function OnboardingPage({
             </label>
             <textarea className="field-input" id="description" name="description" rows={3} />
           </div>
-          <button type="submit" className="btn-primary w-full">
-            Create my AI assistant
-          </button>
+          <SubmitButton pendingText="Setting up...">Create my AI assistant</SubmitButton>
         </form>
       </div>
     </main>

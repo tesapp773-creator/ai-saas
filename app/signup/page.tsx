@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signUp } from "@/lib/actions";
+import SubmitButton from "@/components/submit-button";
 
 export default function SignupPage({
   searchParams,
@@ -47,9 +48,7 @@ export default function SignupPage({
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full">
-            Create account
-          </button>
+          <SubmitButton pendingText="Creating account...">Create account</SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-ink-muted">

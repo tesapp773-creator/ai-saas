@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signIn } from "@/lib/actions";
+import SubmitButton from "@/components/submit-button";
 
 export default function LoginPage({
   searchParams,
@@ -34,9 +35,7 @@ export default function LoginPage({
             </label>
             <input className="field-input" id="password" name="password" type="password" required />
           </div>
-          <button type="submit" className="btn-primary w-full">
-            Log in
-          </button>
+          <SubmitButton pendingText="Logging in...">Log in</SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-ink-muted">
