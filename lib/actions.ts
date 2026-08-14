@@ -98,9 +98,12 @@ export async function addKnowledgeItem(formData: FormData) {
     price,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    redirect(`/dashboard/knowledge?error=${encodeURIComponent(error.message)}`);
+  }
 
   revalidatePath("/dashboard/knowledge");
+  redirect("/dashboard/knowledge?success=Added to your AI's knowledge");
 }
 
 export async function toggleKnowledgeItem(id: string, isActive: boolean) {
