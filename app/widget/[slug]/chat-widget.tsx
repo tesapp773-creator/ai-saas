@@ -22,19 +22,18 @@ function storeConversationId(businessKey: string, id: string) {
   localStorage.setItem(`mkj_conversation_id_${businessKey}`, id);
 }
 
-const SENDER_STYLE: Record<string, string> = {
-  customer: "ml-auto bg-ink text-paper",
-  ai: "border border-line bg-white text-ink",
-  owner: "border border-teal/40 bg-teal-dim text-ink",
-};
-
 export default function ChatWidget({
   businessName,
   publicKey,
+  avatarUrl,
+  themeColor,
 }: {
   businessName: string;
   publicKey: string;
+  avatarUrl?: string | null;
+  themeColor?: string | null;
 }) {
+  const color = themeColor || "#14213D";
   const [messages, setMessages] = useState<ChatMessage[]>([
     { sender: "ai", content: `Hi, I'm ${businessName}'s assistant. How can I help?` },
   ]);
@@ -50,7 +49,6 @@ export default function ChatWidget({
   useEffect(() => {
     const stored = getStoredConversationId(publicKey);
     if (!stored) return;
-
     conversationIdRef.current = stored;
 
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/chat`, {
@@ -77,9 +75,6 @@ export default function ChatWidget({
         });
         const data = await res.json();
         if (data.messages?.length) {
-          // Every message here has a real database id, and every message already in
-          // local state (sent via send() below) is tagged with its real id too, so
-          // this comparison is exact - no more guessing by content and no duplicates.
           setMessages((prev) => {
             const knownIds = new Set(prev.map((m) => m.id).filter(Boolean));
             const fresh = data.messages.filter((m: ChatMessage) => !knownIds.has(m.id));
@@ -126,12 +121,8 @@ export default function ChatWidget({
       conversationIdRef.current = data.conversation_id;
       storeConversationId(publicKey, data.conversation_id);
 
-      // Reconcile the optimistic customer message with its real id, and add the AI
-      // reply with its real id too - this is what makes the polling dedupe above work.
       setMessages((prev) => {
-        const reconciled = prev.map((m) =>
-          m.id === tempId ? { ...m, id: data.customer_message_id ?? m.id } : m
-        );
+        const reconciled = prev.map((m) => (m.id === tempId ? { ...m, id: data.customer_message_id ?? m.id } : m));
         return [...reconciled, { id: data.ai_message_id, sender: "ai", content: data.reply }];
       });
     } catch {
@@ -143,19 +134,32 @@ export default function ChatWidget({
 
   return (
     <div className="flex h-[600px] w-full max-w-md flex-col overflow-hidden rounded-lg border border-line bg-white">
-      <div className="border-b border-line px-4 py-3">
-        <p className="font-medium text-ink">{businessName}</p>
-        <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-          <span className="h-1.5 w-1.5 rounded-full bg-teal" />
-          Usually replies instantly
-        </p>
+      <div className="flex items-center gap-3 border-b border-line px-4 py-3" style={{ backgroundColor: color }}>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-medium text-white">
+            {businessName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div>
+          <p className="font-medium text-white">{businessName}</p>
+          <p className="flex items-center gap-1.5 text-xs text-white/70">
+            <span className="h-1.5 w-1.5 rounded-full bg-teal" />
+            Usually replies instantly
+          </p>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-paper p-4">
         {messages.map((m, i) => (
           <div
             key={m.id ?? i}
-            className={`max-w-[80%] rounded-md px-3.5 py-2.5 text-sm ${SENDER_STYLE[m.sender]}`}
+            className={`max-w-[80%] rounded-md px-3.5 py-2.5 text-sm ${
+              m.sender === "customer" ? "ml-auto text-white" : "border border-line bg-white text-ink"
+            }`}
+            style={m.sender === "customer" ? { backgroundColor: color } : undefined}
           >
             {m.content}
           </div>
@@ -176,7 +180,12 @@ export default function ChatWidget({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question..."
         />
-        <button type="submit" className="btn-primary" disabled={isSending}>
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+          style={{ backgroundColor: color }}
+          disabled={isSending}
+        >
           Send
         </button>
       </form>
