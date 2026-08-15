@@ -14,8 +14,6 @@ function getCustomerRef(businessKey: string) {
   return ref;
 }
 
-// Persisting the conversation id means refreshing the page continues the same
-// conversation instead of silently starting a new one and losing the owner's reply.
 function getStoredConversationId(businessKey: string) {
   return localStorage.getItem(`mkj_conversation_id_${businessKey}`);
 }
@@ -41,7 +39,6 @@ export default function ChatWidget({
     { sender: "ai", content: `Hi, I'm ${businessName}'s assistant. How can I help?` },
   ]);
   const [input, setInput] = useState("");
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
@@ -50,13 +47,11 @@ export default function ChatWidget({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // On load: resume the existing conversation (if any) instead of starting fresh.
   useEffect(() => {
     const stored = getStoredConversationId(publicKey);
     if (!stored) return;
 
     conversationIdRef.current = stored;
-    setConversationId(stored);
 
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/chat`, {
       method: "POST",
@@ -70,8 +65,6 @@ export default function ChatWidget({
       .catch(() => {});
   }, [publicKey]);
 
-  // Poll for new messages (like an owner's reply) every few seconds. This keeps the
-  // widget feeling live without opening direct database access to unauthenticated visitors.
   useEffect(() => {
     const interval = setInterval(async () => {
       const id = conversationIdRef.current;
@@ -84,6 +77,9 @@ export default function ChatWidget({
         });
         const data = await res.json();
         if (data.messages?.length) {
+          // Every message here has a real database id, and every message already in
+          // local state (sent via send() below) is tagged with its real id too, so
+          // this comparison is exact - no more guessing by content and no duplicates.
           setMessages((prev) => {
             const knownIds = new Set(prev.map((m) => m.id).filter(Boolean));
             const fresh = data.messages.filter((m: ChatMessage) => !knownIds.has(m.id));
@@ -102,7 +98,8 @@ export default function ChatWidget({
     const text = input.trim();
     if (!text || isSending) return;
 
-    setMessages((prev) => [...prev, { sender: "customer", content: text }]);
+    const tempId = `temp-${crypto.randomUUID()}`;
+    setMessages((prev) => [...prev, { id: tempId, sender: "customer", content: text }]);
     setInput("");
     setIsSending(true);
 
@@ -127,9 +124,16 @@ export default function ChatWidget({
       }
 
       conversationIdRef.current = data.conversation_id;
-      setConversationId(data.conversation_id);
       storeConversationId(publicKey, data.conversation_id);
-      setMessages((prev) => [...prev, { sender: "ai", content: data.reply }]);
+
+      // Reconcile the optimistic customer message with its real id, and add the AI
+      // reply with its real id too - this is what makes the polling dedupe above work.
+      setMessages((prev) => {
+        const reconciled = prev.map((m) =>
+          m.id === tempId ? { ...m, id: data.customer_message_id ?? m.id } : m
+        );
+        return [...reconciled, { id: data.ai_message_id, sender: "ai", content: data.reply }];
+      });
     } catch {
       setMessages((prev) => [...prev, { sender: "ai", content: "Sorry, something went wrong. Please try again." }]);
     } finally {

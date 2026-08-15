@@ -28,31 +28,66 @@ export default function ConversationDetail({
     setMessages(initialMessages);
   }, [initialMessages]);
 
-  // Live updates: a customer or the AI can send a message from the widget at any
-  // moment while this page is open, so this listens for new rows instead of making
-  // the owner refresh the page to see them.
+  // Instant path: Supabase Realtime, when it delivers.
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`conversation-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "customer_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const incoming = payload.new as CustomerMessage;
-          setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
-        }
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function setup() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      }
+
+      channel = supabase
+        .channel(`conversation-${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "customer_messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const incoming = payload.new as CustomerMessage;
+            setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+          }
+        )
+        .subscribe();
+    }
+
+    setup();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
+  }, [conversationId]);
+
+  // Guaranteed path: a plain authenticated re-fetch every few seconds, so this page
+  // never depends on Realtime alone to stay live - if Realtime misses something,
+  // this catches it within a few seconds, no manual refresh ever required.
+  useEffect(() => {
+    const supabase = createClient();
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("customer_messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (data) {
+        setMessages((prev) => {
+          const knownIds = new Set(prev.map((m) => m.id));
+          const fresh = data.filter((m) => !knownIds.has(m.id));
+          return fresh.length ? [...prev, ...(fresh as CustomerMessage[])] : prev;
+        });
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, [conversationId]);
 
   return (
