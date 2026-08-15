@@ -22,7 +22,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const navItems = [
     { href: "/dashboard", label: "Overview" },
     { href: "/dashboard/knowledge", label: "AI knowledge" },
+    { href: "/dashboard/orders", label: "Orders" },
+    { href: "/dashboard/payments", label: "Payment methods" },
     { href: "/dashboard/conversations", label: "Conversations" },
+    { href: "/dashboard/analytics", label: "Analytics" },
+    { href: "/dashboard/settings", label: "Settings" },
   ];
 
   return (
@@ -32,11 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <p className="mb-6 truncate text-sm text-ink-muted">{business.name}</p>
         <nav className="flex flex-1 flex-col gap-1">
           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-sm px-3 py-2 text-sm text-ink hover:bg-paper"
-            >
+            <Link key={item.href} href={item.href} className="rounded-sm px-3 py-2 text-sm text-ink hover:bg-paper">
               {item.label}
             </Link>
           ))}
