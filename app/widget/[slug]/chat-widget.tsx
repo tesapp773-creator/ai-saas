@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import BusinessProfilePanel from "./business-profile-panel";
 
-type ChatMessage = { id?: string; sender: "customer" | "ai" | "owner"; content: string };
+type ChatMessage = { id?: string; sender: "customer" | "ai" | "owner"; content: string; image_url?: string | null };
 type Link = { id: string; label: string; url: string; description: string | null };
 
 function getCustomerRef(businessKey: string) {
@@ -54,8 +54,6 @@ export default function ChatWidget({
   const [showProfile, setShowProfile] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
-  // A ref updates the instant it's set, with no render delay - this is what actually
-  // closes the double-tap race, unlike state which can lag a frame behind on a slow device.
   const isSendingRef = useRef(false);
 
   useEffect(() => {
@@ -141,7 +139,10 @@ export default function ChatWidget({
 
       setMessages((prev) => {
         const reconciled = prev.map((m) => (m.id === tempId ? { ...m, id: data.customer_message_id ?? m.id } : m));
-        return [...reconciled, { id: data.ai_message_id, sender: "ai", content: data.reply }];
+        return [
+          ...reconciled,
+          { id: data.ai_message_id, sender: "ai", content: data.reply, image_url: data.image_url ?? null },
+        ];
       });
     } catch {
       setMessages((prev) => [...prev, { sender: "ai", content: "Sorry, something went wrong. Please try again." }]);
@@ -194,14 +195,25 @@ export default function ChatWidget({
         style={wallpaperUrl ? { backgroundImage: `url(${wallpaperUrl})` } : undefined}
       >
         {messages.map((m, i) => (
-          <div
-            key={m.id ?? i}
-            className={`max-w-[80%] rounded-md px-3.5 py-2.5 text-sm shadow-sm ${
-              m.sender === "customer" ? "ml-auto text-white" : "border border-line bg-white text-ink"
-            }`}
-            style={m.sender === "customer" ? { backgroundColor: color } : undefined}
-          >
-            {m.content}
+          <div key={m.id ?? i} className={`max-w-[80%] ${m.sender === "customer" ? "ml-auto" : ""}`}>
+            {m.content && (
+              <div
+                className={`rounded-md px-3.5 py-2.5 text-sm shadow-sm ${
+                  m.sender === "customer" ? "text-white" : "border border-line bg-white text-ink"
+                } ${m.image_url ? "mb-1.5" : ""}`}
+                style={m.sender === "customer" ? { backgroundColor: color } : undefined}
+              >
+                {m.content}
+              </div>
+            )}
+            {m.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.image_url}
+                alt=""
+                className="max-h-64 w-full rounded-md border border-line object-cover shadow-sm"
+              />
+            )}
           </div>
         ))}
         {isSending && <p className="text-xs text-ink-muted">Typing…</p>}
