@@ -5,7 +5,7 @@ export default async function WidgetPage({ params }: { params: { slug: string } 
   const supabase = createClient();
   const { data: business } = await supabase
     .from("businesses")
-    .select("name, public_key, avatar_url, widget_theme_color")
+    .select("id, name, public_key, avatar_url, widget_theme_color, widget_wallpaper_url, description, location, working_hours")
     .eq("slug", params.slug)
     .single();
 
@@ -17,6 +17,12 @@ export default async function WidgetPage({ params }: { params: { slug: string } 
     );
   }
 
+  const { data: links } = await supabase
+    .from("business_links")
+    .select("id, label, url, description")
+    .eq("business_id", business.id)
+    .order("created_at", { ascending: false });
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-8">
       <ChatWidget
@@ -24,6 +30,11 @@ export default async function WidgetPage({ params }: { params: { slug: string } 
         publicKey={business.public_key}
         avatarUrl={business.avatar_url}
         themeColor={business.widget_theme_color}
+        wallpaperUrl={business.widget_wallpaper_url}
+        description={business.description}
+        location={business.location}
+        workingHours={business.working_hours}
+        links={links ?? []}
       />
     </main>
   );
