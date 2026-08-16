@@ -10,6 +10,21 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    const anyErr = err as Record<string, unknown>;
+    if (typeof anyErr.message === "string") return anyErr.message;
+    if (typeof anyErr.error_description === "string") return anyErr.error_description;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return "Unknown error (unserializable)";
+    }
+  }
+  return String(err);
+}
+
 type Status = "idle" | "checking" | "enabling" | "enabled" | "unsupported" | "denied" | "error";
 
 export default function NotificationsToggle({ businessId }: { businessId: string }) {
@@ -75,7 +90,7 @@ export default function NotificationsToggle({ businessId }: { businessId: string
       setStatus("enabled");
     } catch (err) {
       console.error("Push subscribe failed:", err);
-      setErrorDetail(err instanceof Error ? err.message : String(err));
+      setErrorDetail(describeError(err));
       setStatus("error");
     }
   }
