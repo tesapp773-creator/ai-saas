@@ -21,11 +21,7 @@ export async function signUp(formData: FormData) {
   const fullName = String(formData.get("full_name"));
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
-  });
+  const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
 
   if (error) redirect(`/signup?error=${encodeURIComponent(error.message)}`);
   redirect("/onboarding");
@@ -53,7 +49,6 @@ export async function createBusiness(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) redirect("/login");
 
   const name = String(formData.get("name"));
@@ -119,7 +114,6 @@ export async function sendOwnerReply(conversationId: string, businessId: string,
   });
 
   if (error) throw new Error(error.message);
-
   await supabase.from("customer_conversations").update({ status: "resolved" }).eq("id", conversationId);
   revalidatePath("/dashboard/conversations");
 }
@@ -174,14 +168,40 @@ export async function updateBusinessCustomization(formData: FormData) {
   const supabase = createClient();
   const businessId = String(formData.get("business_id"));
   const avatarUrl = String(formData.get("avatar_url") || "") || null;
+  const wallpaperUrl = String(formData.get("widget_wallpaper_url") || "") || null;
   const themeColor = String(formData.get("widget_theme_color") || "#14213D");
+  const location = String(formData.get("location") || "") || null;
 
   const { error } = await supabase
     .from("businesses")
-    .update({ avatar_url: avatarUrl, widget_theme_color: themeColor })
+    .update({
+      avatar_url: avatarUrl,
+      widget_wallpaper_url: wallpaperUrl,
+      widget_theme_color: themeColor,
+      location,
+    })
     .eq("id", businessId);
 
   if (error) redirect(`/dashboard/settings?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/dashboard/settings");
   redirect("/dashboard/settings?success=Saved");
+}
+
+export async function addBusinessLink(formData: FormData) {
+  const supabase = createClient();
+  const businessId = String(formData.get("business_id"));
+  const label = String(formData.get("label"));
+  const url = String(formData.get("url"));
+  const description = String(formData.get("description") || "") || null;
+
+  const { error } = await supabase.from("business_links").insert({ business_id: businessId, label, url, description });
+  if (error) redirect(`/dashboard/settings?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/dashboard/settings");
+}
+
+export async function deleteBusinessLink(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("business_links").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/settings");
 }
