@@ -26,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/payments", label: "Payment methods" },
     { href: "/dashboard/conversations", label: "Conversations" },
     { href: "/dashboard/analytics", label: "Analytics" },
+    { href: "/dashboard/billing", label: "Billing" },
     { href: "/dashboard/settings", label: "Settings" },
   ];
 
