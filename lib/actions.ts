@@ -75,8 +75,11 @@ export async function addKnowledgeItem(formData: FormData) {
   const content = String(formData.get("content"));
   const priceRaw = formData.get("price");
   const price = priceRaw ? Number(priceRaw) : null;
+  const imageUrl = String(formData.get("image_url") || "") || null;
 
-  const { error } = await supabase.from("knowledge_items").insert({ business_id: businessId, type, title, content, price });
+  const { error } = await supabase
+    .from("knowledge_items")
+    .insert({ business_id: businessId, type, title, content, price, image_url: type === "product" ? imageUrl : null });
 
   if (error) redirect(`/dashboard/knowledge?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/dashboard/knowledge");
