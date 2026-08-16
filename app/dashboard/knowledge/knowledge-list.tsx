@@ -10,7 +10,7 @@ const TYPE_LABEL: Record<string, string> = {
   policy: "Policy",
 };
 
-export default function KnowledgeList({ items }: { items: KnowledgeItem[] }) {
+export default function KnowledgeList({ items }: { items: (KnowledgeItem & { image_url?: string | null })[] }) {
   const [isPending, startTransition] = useTransition();
 
   if (items.length === 0) {
@@ -26,22 +26,26 @@ export default function KnowledgeList({ items }: { items: KnowledgeItem[] }) {
     <ul className="space-y-3">
       {items.map((item) => (
         <li key={item.id} className="card flex items-start justify-between gap-4 p-4">
-          <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="rounded-sm bg-teal-dim px-2 py-0.5 font-mono text-xs text-teal">
-                {TYPE_LABEL[item.type]}
-              </span>
-              {!item.is_active && (
-                <span className="text-xs text-ink-muted">Hidden from AI</span>
+          <div className="flex min-w-0 gap-3">
+            {item.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.image_url} alt="" className="h-14 w-14 shrink-0 rounded-sm object-cover" />
+            )}
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="rounded-sm bg-teal-dim px-2 py-0.5 font-mono text-xs text-teal">
+                  {TYPE_LABEL[item.type]}
+                </span>
+                {!item.is_active && <span className="text-xs text-ink-muted">Hidden from AI</span>}
+              </div>
+              <p className="font-medium text-ink">{item.title}</p>
+              <p className="text-sm text-ink-muted">{item.content}</p>
+              {item.price != null && (
+                <p className="mt-1 font-mono text-sm text-ink">
+                  {item.currency} {item.price}
+                </p>
               )}
             </div>
-            <p className="font-medium text-ink">{item.title}</p>
-            <p className="text-sm text-ink-muted">{item.content}</p>
-            {item.price != null && (
-              <p className="mt-1 font-mono text-sm text-ink">
-                {item.currency} {item.price}
-              </p>
-            )}
           </div>
           <div className="flex shrink-0 gap-2">
             <button
