@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
+import { PLANS, currency, type PlanTier } from "@/lib/plans";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7) + "-01";
@@ -33,9 +34,11 @@ export default async function DashboardOverviewPage() {
     .select("id", { count: "exact", head: true })
     .eq("business_id", business.id);
 
+  const plan = PLANS[business.plan_tier as PlanTier];
   const used = usage?.conversations_count ?? 0;
-  const included = business.conversations_included;
+  const included = plan.includedConversations;
   const percent = Math.min(100, Math.round((used / included) * 100));
+  const overage = Math.max(0, used - included);
   const hasKnowledge = (knowledgeCount ?? 0) > 0;
   const hasConversation = used > 0;
 
@@ -91,7 +94,7 @@ export default async function DashboardOverviewPage() {
             This month's usage
           </span>
           <span className="rounded-sm bg-teal-dim px-2 py-1 font-mono text-xs text-teal">
-            {business.plan_tier} plan
+            {plan.name} plan
           </span>
         </div>
         <div className="mb-2 flex items-end justify-between">
@@ -107,6 +110,14 @@ export default async function DashboardOverviewPage() {
         <p className="mt-3 text-xs text-ink-muted">
           {usage?.messages_count ?? 0} messages handled · resets on the 1st
         </p>
+        {overage > 0 && (
+          <p className="mt-3 rounded-sm bg-gold-dim px-3 py-2 text-xs text-ink">
+            {overage} over your plan this month, roughly {currency(overage * plan.overageRate)} extra.{" "}
+            <a href="/dashboard/billing" className="underline underline-offset-2">
+              See billing
+            </a>
+          </p>
+        )}
       </div>
 
       <div className="card p-6">
