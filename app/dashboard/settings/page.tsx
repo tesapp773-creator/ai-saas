@@ -4,6 +4,7 @@ import { updateBusinessCustomization } from "@/lib/actions";
 import SubmitButton from "@/components/submit-button";
 import ImageUploadField from "./image-upload-field";
 import LinksManager from "./links-manager";
+import NotificationsToggle from "./notifications-toggle";
 
 export default async function SettingsPage({
   searchParams,
@@ -42,6 +43,10 @@ export default async function SettingsPage({
           {searchParams.error}
         </p>
       )}
+
+      <div className="mb-8">
+        <NotificationsToggle businessId={business.id} />
+      </div>
 
       <form action={updateBusinessCustomization} className="card mb-8 space-y-5 p-6">
         <input type="hidden" name="business_id" value={business.id} />
