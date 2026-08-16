@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import BusinessProfilePanel from "./business-profile-panel";
 
 type ChatMessage = { id?: string; sender: "customer" | "ai" | "owner"; content: string };
+type Link = { id: string; label: string; url: string; description: string | null };
 
 function getCustomerRef(businessKey: string) {
   const storageKey = `mkj_customer_ref_${businessKey}`;
@@ -27,11 +29,21 @@ export default function ChatWidget({
   publicKey,
   avatarUrl,
   themeColor,
+  wallpaperUrl,
+  description,
+  location,
+  workingHours,
+  links,
 }: {
   businessName: string;
   publicKey: string;
   avatarUrl?: string | null;
   themeColor?: string | null;
+  wallpaperUrl?: string | null;
+  description?: string | null;
+  location?: string | null;
+  workingHours?: string | null;
+  links: Link[];
 }) {
   const color = themeColor || "#14213D";
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -39,6 +51,7 @@ export default function ChatWidget({
   ]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
 
@@ -133,8 +146,25 @@ export default function ChatWidget({
   }
 
   return (
-    <div className="flex h-[600px] w-full max-w-md flex-col overflow-hidden rounded-lg border border-line bg-white">
-      <div className="flex items-center gap-3 border-b border-line px-4 py-3" style={{ backgroundColor: color }}>
+    <div className="relative flex h-[600px] w-full max-w-md flex-col overflow-hidden rounded-lg border border-line bg-white">
+      {showProfile && (
+        <BusinessProfilePanel
+          businessName={businessName}
+          avatarUrl={avatarUrl}
+          themeColor={color}
+          description={description}
+          location={location}
+          workingHours={workingHours}
+          links={links}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+
+      <button
+        onClick={() => setShowProfile(true)}
+        className="flex items-center gap-3 border-b border-line px-4 py-3 text-left"
+        style={{ backgroundColor: color }}
+      >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
@@ -150,13 +180,17 @@ export default function ChatWidget({
             Usually replies instantly
           </p>
         </div>
-      </div>
+      </button>
 
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-paper p-4">
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-3 overflow-y-auto bg-paper bg-cover bg-center p-4"
+        style={wallpaperUrl ? { backgroundImage: `url(${wallpaperUrl})` } : undefined}
+      >
         {messages.map((m, i) => (
           <div
             key={m.id ?? i}
-            className={`max-w-[80%] rounded-md px-3.5 py-2.5 text-sm ${
+            className={`max-w-[80%] rounded-md px-3.5 py-2.5 text-sm shadow-sm ${
               m.sender === "customer" ? "ml-auto text-white" : "border border-line bg-white text-ink"
             }`}
             style={m.sender === "customer" ? { backgroundColor: color } : undefined}
