@@ -54,6 +54,9 @@ export default function ChatWidget({
   const [showProfile, setShowProfile] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
+  // A ref updates the instant it's set, with no render delay - this is what actually
+  // closes the double-tap race, unlike state which can lag a frame behind on a slow device.
+  const isSendingRef = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -104,12 +107,14 @@ export default function ChatWidget({
 
   async function send() {
     const text = input.trim();
-    if (!text || isSending) return;
+    if (!text || isSendingRef.current) return;
+
+    isSendingRef.current = true;
+    setIsSending(true);
 
     const tempId = `temp-${crypto.randomUUID()}`;
     setMessages((prev) => [...prev, { id: tempId, sender: "customer", content: text }]);
     setInput("");
-    setIsSending(true);
 
     try {
       const customerRef = getCustomerRef(publicKey);
@@ -141,6 +146,7 @@ export default function ChatWidget({
     } catch {
       setMessages((prev) => [...prev, { sender: "ai", content: "Sorry, something went wrong. Please try again." }]);
     } finally {
+      isSendingRef.current = false;
       setIsSending(false);
     }
   }
@@ -213,6 +219,7 @@ export default function ChatWidget({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question..."
+          disabled={isSending}
         />
         <button
           type="submit"
