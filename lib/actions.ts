@@ -174,6 +174,7 @@ export async function updateBusinessCustomization(formData: FormData) {
   const wallpaperUrl = String(formData.get("widget_wallpaper_url") || "") || null;
   const themeColor = String(formData.get("widget_theme_color") || "#14213D");
   const location = String(formData.get("location") || "") || null;
+  const workingHours = String(formData.get("working_hours") || "") || null;
 
   const { error } = await supabase
     .from("businesses")
@@ -182,6 +183,7 @@ export async function updateBusinessCustomization(formData: FormData) {
       widget_wallpaper_url: wallpaperUrl,
       widget_theme_color: themeColor,
       location,
+      working_hours: workingHours,
     })
     .eq("id", businessId);
 
