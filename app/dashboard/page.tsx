@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getUserBusiness } from "@/lib/get-user-business";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { PLANS, currency, type PlanTier } from "@/lib/plans";
@@ -8,19 +9,11 @@ function currentPeriod() {
 }
 
 export default async function DashboardOverviewPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, business, role } = await getUserBusiness();
   if (!user) redirect("/login");
-
-  const { data: business } = await supabase
-    .from("businesses")
-    .select("*")
-    .eq("owner_id", user.id)
-    .single();
-
   if (!business) redirect("/onboarding");
+
+  const supabase = createClient();
 
   const { data: usage } = await supabase
     .from("usage_counters")
@@ -112,10 +105,15 @@ export default async function DashboardOverviewPage() {
         </p>
         {overage > 0 && (
           <p className="mt-3 rounded-sm bg-gold-dim px-3 py-2 text-xs text-ink">
-            {overage} over your plan this month, roughly {currency(overage * plan.overageRate)} extra.{" "}
-            <a href="/dashboard/billing" className="underline underline-offset-2">
-              See billing
-            </a>
+            {overage} over your plan this month, roughly {currency(overage * plan.overageRate)} extra.
+            {role === "owner" && (
+              <>
+                {" "}
+                <a href="/dashboard/billing" className="underline underline-offset-2">
+                  See billing
+                </a>
+              </>
+            )}
           </p>
         )}
       </div>
