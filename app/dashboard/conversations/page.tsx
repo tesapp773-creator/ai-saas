@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserBusiness } from "@/lib/get-user-business";
 import ConversationDetail from "./conversation-detail";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -13,19 +14,11 @@ export default async function ConversationsPage({
 }: {
   searchParams: { id?: string };
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, business } = await getUserBusiness();
   if (!user) redirect("/login");
-
-  const { data: business } = await supabase
-    .from("businesses")
-    .select("id")
-    .eq("owner_id", user.id)
-    .single();
-
   if (!business) redirect("/onboarding");
+
+  const supabase = createClient();
 
   const { data: conversations } = await supabase
     .from("customer_conversations")
