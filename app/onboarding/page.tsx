@@ -1,11 +1,18 @@
+import { redirect } from "next/navigation";
+import { getUserBusiness } from "@/lib/get-user-business";
 import { createBusiness } from "@/lib/actions";
 import SubmitButton from "@/components/submit-button";
 
-export default function OnboardingPage({
+export default async function OnboardingPage({
   searchParams,
 }: {
   searchParams: { error?: string };
 }) {
+  // If a team invite already gave this person a business, skip straight to the
+  // dashboard instead of prompting them to create a new one.
+  const { business } = await getUserBusiness();
+  if (business) redirect("/dashboard");
+
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
       <div className="w-full max-w-md">
