@@ -1,17 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserBusiness } from "@/lib/get-user-business";
 import OrdersList from "./orders-list";
 
 export default async function OrdersPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, business } = await getUserBusiness();
   if (!user) redirect("/login");
-
-  const { data: business } = await supabase.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!business) redirect("/onboarding");
 
+  const supabase = createClient();
   const { data: orders } = await supabase
     .from("orders")
     .select("*")
