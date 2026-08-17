@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserBusiness } from "@/lib/get-user-business";
 import PaymentMethodForm from "./payment-method-form";
 import PaymentMethodList from "./payment-method-list";
 
@@ -8,15 +9,12 @@ export default async function PaymentsPage({
 }: {
   searchParams: { error?: string; success?: string };
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, business, role } = await getUserBusiness();
   if (!user) redirect("/login");
-
-  const { data: business } = await supabase.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!business) redirect("/onboarding");
+  if (role !== "owner") redirect("/dashboard");
 
+  const supabase = createClient();
   const { data: methods } = await supabase
     .from("payment_methods")
     .select("*")
