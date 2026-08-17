@@ -99,6 +99,23 @@ export default async function SettingsPage({
           <p className="mt-1.5 text-xs text-ink-muted">Shown on your AI's profile panel.</p>
         </div>
 
+        <div>
+          <label className="field-label" htmlFor="working_hours">
+            Working hours
+          </label>
+          <input
+            className="field-input"
+            id="working_hours"
+            name="working_hours"
+            placeholder="e.g. Mon-Sat, 9am - 7pm WAT"
+            defaultValue={business.working_hours ?? ""}
+          />
+          <p className="mt-1.5 text-xs text-ink-muted">
+            Your AI checks the real current time against this and lets customers know if you're
+            currently open or closed, and when to expect a reply.
+          </p>
+        </div>
+
         <SubmitButton pendingText="Saving...">Save</SubmitButton>
       </form>
 
