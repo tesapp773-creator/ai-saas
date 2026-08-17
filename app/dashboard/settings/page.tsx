@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserBusiness } from "@/lib/get-user-business";
 import { updateBusinessCustomization } from "@/lib/actions";
 import SubmitButton from "@/components/submit-button";
 import ImageUploadField from "./image-upload-field";
@@ -11,15 +12,26 @@ export default async function SettingsPage({
 }: {
   searchParams: { error?: string; success?: string };
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, business, role } = await getUserBusiness();
   if (!user) redirect("/login");
-
-  const { data: business } = await supabase.from("businesses").select("*").eq("owner_id", user.id).single();
   if (!business) redirect("/onboarding");
 
+  // Everyone on the team can still turn on their own notifications, even though
+  // branding, hours, and links below are owner-only.
+  if (role !== "owner") {
+    return (
+      <div className="max-w-3xl">
+        <h1 className="mb-1 text-2xl">Settings</h1>
+        <p className="mb-8 text-sm text-ink-muted">
+          Business branding and details are managed by the owner. You can still control your own
+          notifications below.
+        </p>
+        <NotificationsToggle businessId={business.id} />
+      </div>
+    );
+  }
+
+  const supabase = createClient();
   const { data: links } = await supabase
     .from("business_links")
     .select("*")
