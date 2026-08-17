@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { getUserBusiness } from "@/lib/get-user-business";
 import { inviteTeamMember, removeTeamMember } from "@/lib/actions";
 
@@ -11,7 +12,7 @@ export default async function TeamPage({
   if (!user) redirect("/login");
   if (!business) redirect("/onboarding");
 
-  const supabase = (await import("@/lib/supabase/server")).createClient();
+  const supabase = createClient();
   const { data: members } = await supabase
     .from("business_members")
     .select("*")
@@ -84,7 +85,7 @@ export default async function TeamPage({
 
       {role === "owner" && (
         <p className="mt-6 text-xs text-ink-muted">
-          When they sign up using the exact email you invited, they're automatically added — no
+          When they sign up using the exact email you invited, they're automatically added \u2014 no
           separate business setup on their end.
         </p>
       )}
