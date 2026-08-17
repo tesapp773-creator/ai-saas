@@ -15,15 +15,43 @@ function slugify(name: string) {
   );
 }
 
+// If this email has a pending team invite waiting, claim it now that they have a
+// real session. Covers both a brand new signup and an existing user logging in.
+async function claimPendingInvite(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+  userId: string
+) {
+  const { data: pendingInvite } = await supabase
+    .from("business_members")
+    .select("id")
+    .eq("invited_email", email)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (pendingInvite) {
+    await supabase
+      .from("business_members")
+      .update({ user_id: userId, status: "active" })
+      .eq("id", pendingInvite.id);
+  }
+}
+
 export async function signUp(formData: FormData) {
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
   const fullName = String(formData.get("full_name"));
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
 
   if (error) redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  if (data.user) await claimPendingInvite(supabase, email, data.user.id);
+
   redirect("/onboarding");
 }
 
@@ -32,9 +60,11 @@ export async function signIn(formData: FormData) {
   const password = String(formData.get("password"));
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  if (data.user) await claimPendingInvite(supabase, email, data.user.id);
+
   redirect("/dashboard");
 }
 
@@ -55,15 +85,31 @@ export async function createBusiness(formData: FormData) {
   const industry = String(formData.get("industry") || "");
   const description = String(formData.get("description") || "");
 
-  const { error } = await supabase.from("businesses").insert({
-    owner_id: user.id,
-    name,
-    industry: industry || null,
-    description: description || null,
-    slug: slugify(name),
-  });
+  const { data: business, error } = await supabase
+    .from("businesses")
+    .insert({
+      owner_id: user.id,
+      name,
+      industry: industry || null,
+      description: description || null,
+      slug: slugify(name),
+    })
+    .select("id")
+    .single();
 
   if (error) redirect(`/onboarding?error=${encodeURIComponent(error.message)}`);
+
+  // The creator is automatically the owner-member of their own business.
+  if (business) {
+    await supabase.from("business_members").insert({
+      business_id: business.id,
+      user_id: user.id,
+      invited_email: user.email ?? "owner",
+      role: "owner",
+      status: "active",
+    });
+  }
+
   redirect("/dashboard");
 }
 
@@ -209,4 +255,28 @@ export async function deleteBusinessLink(id: string) {
   const { error } = await supabase.from("business_links").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
+}
+
+export async function inviteTeamMember(formData: FormData) {
+  const supabase = createClient();
+  const businessId = String(formData.get("business_id"));
+  const invitedEmail = String(formData.get("invited_email")).trim().toLowerCase();
+
+  const { error } = await supabase.from("business_members").insert({
+    business_id: businessId,
+    invited_email: invitedEmail,
+    role: "staff",
+    status: "pending",
+  });
+
+  if (error) redirect(`/dashboard/team?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/dashboard/team");
+  redirect("/dashboard/team?success=Invited. They'll get access as soon as they sign up.");
+}
+
+export async function removeTeamMember(id: string, _formData?: FormData) {
+  const supabase = createClient();
+  const { error } = await supabase.from("business_members").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/team");
 }
