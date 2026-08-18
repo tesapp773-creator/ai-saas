@@ -3,6 +3,7 @@ import { getUserBusiness } from "@/lib/get-user-business";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { PLANS, currency, type PlanTier } from "@/lib/plans";
+import TestYourAI from "./test-your-ai";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7) + "-01";
@@ -49,6 +50,8 @@ export default async function DashboardOverviewPage() {
       <p className="mb-8 text-sm text-ink-muted">
         Here's how {business.name}'s AI assistant is doing this month.
       </p>
+
+      {hasKnowledge && <TestYourAI publicKey={business.public_key} businessName={business.name} />}
 
       {!hasKnowledge && (
         <div className="card mb-6 p-6">
