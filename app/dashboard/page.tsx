@@ -30,11 +30,17 @@ export default async function DashboardOverviewPage() {
 
   const plan = PLANS[business.plan_tier as PlanTier];
   const used = usage?.conversations_count ?? 0;
+  const messagesHandled = usage?.messages_count ?? 0;
   const included = plan.includedConversations;
   const percent = Math.min(100, Math.round((used / included) * 100));
   const overage = Math.max(0, used - included);
   const hasKnowledge = (knowledgeCount ?? 0) > 0;
   const hasConversation = used > 0;
+
+  // A rough, honest estimate: about 2 minutes saved per AI-handled message, which is
+  // roughly how long typing a reply by hand takes. Framed as an estimate, not a promise.
+  const minutesSaved = messagesHandled * 2;
+  const hoursSaved = (minutesSaved / 60).toFixed(1);
 
   const widgetUrl = getSiteUrl() + "/widget/" + business.slug;
 
@@ -83,6 +89,18 @@ export default async function DashboardOverviewPage() {
         </div>
       )}
 
+      {messagesHandled > 0 && (
+        <div className="card mb-6 flex items-center justify-between p-6">
+          <div>
+            <span className="mb-1 block text-xs uppercase tracking-widest text-gold">Time back in your day</span>
+            <span className="text-lg text-ink">
+              Your AI has handled {messagesHandled} messages this month \u2014 an estimated{" "}
+              <span className="font-mono">{hoursSaved} hours</span> you didn't spend typing replies.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Signature element: the usage ledger */}
       <div className="card mb-6 p-6">
         <div className="mb-4 flex items-baseline justify-between">
@@ -104,7 +122,7 @@ export default async function DashboardOverviewPage() {
           />
         </div>
         <p className="mt-3 text-xs text-ink-muted">
-          {usage?.messages_count ?? 0} messages handled · resets on the 1st
+          {messagesHandled} messages handled · resets on the 1st
         </p>
         {overage > 0 && (
           <p className="mt-3 rounded-sm bg-gold-dim px-3 py-2 text-xs text-ink">
