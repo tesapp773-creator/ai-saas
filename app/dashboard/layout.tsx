@@ -15,6 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/orders", label: "Orders" },
     { href: "/dashboard/conversations", label: "Conversations" },
     { href: "/dashboard/analytics", label: "Analytics" },
+    { href: "/dashboard/recap", label: "Weekly recap" },
     // Owner-only: sensitive (payment details) or business-level settings
     ...(role === "owner"
       ? [
