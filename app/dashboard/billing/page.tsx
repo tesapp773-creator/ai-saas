@@ -2,12 +2,17 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserBusiness } from "@/lib/get-user-business";
 import { PLANS, currency, type PlanTier } from "@/lib/plans";
+import UpgradeButton from "./upgrade-button";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7) + "-01";
 }
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: { checkout?: string };
+}) {
   const { user, business, role } = await getUserBusiness();
   if (!user) redirect("/login");
   if (!business) redirect("/onboarding");
@@ -32,6 +37,13 @@ export default async function BillingPage() {
     <div className="max-w-3xl">
       <h1 className="mb-1 text-2xl">Billing</h1>
       <p className="mb-8 text-sm text-ink-muted">Your plan, this month's usage, and what it costs.</p>
+
+      {searchParams.checkout === "complete" && (
+        <p className="mb-4 rounded-sm border border-teal/30 bg-teal-dim px-3.5 py-2.5 text-sm text-teal">
+          Payment received — your plan updates automatically within a few seconds of Paystack
+          confirming it.
+        </p>
+      )}
 
       <div className="card mb-6 p-6">
         <div className="mb-4 flex items-baseline justify-between">
@@ -69,24 +81,32 @@ export default async function BillingPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {(Object.entries(PLANS) as [PlanTier, (typeof PLANS)[PlanTier]][]).map(([tier, p]) => (
-          <div key={tier} className={`card p-5 ${tier === currentTier ? "border-ink/40" : ""}`}>
+          <div key={tier} className={`card flex flex-col p-5 ${tier === currentTier ? "border-ink/40" : ""}`}>
             <div className="mb-2 flex items-center justify-between">
               <span className="font-medium text-ink">{p.name}</span>
               {tier === currentTier && (
                 <span className="rounded-sm bg-teal-dim px-1.5 py-0.5 font-mono text-[10px] text-teal">Current</span>
               )}
             </div>
-            <p className="mb-3 font-mono text-xl text-ink">{currency(p.basePrice)}<span className="text-sm text-ink-muted">/mo</span></p>
+            <p className="mb-3 font-mono text-xl text-ink">
+              {currency(p.basePrice)}
+              <span className="text-sm text-ink-muted">/mo</span>
+            </p>
             <p className="mb-3 text-xs text-ink-muted">{p.description}</p>
             <p className="text-xs text-ink-muted">{p.includedConversations.toLocaleString()} conversations included</p>
-            <p className="text-xs text-ink-muted">{currency(p.overageRate)} per conversation after</p>
+            <p className="mb-3 text-xs text-ink-muted">{currency(p.overageRate)} per conversation after</p>
+            {p.wallpaperEnabled && <p className="text-xs text-teal">✓ Custom chat wallpaper</p>}
+            {p.teamEnabled && <p className="mb-3 text-xs text-teal">✓ Team accounts</p>}
+            <div className="mt-auto pt-3">
+              {tier !== currentTier && <UpgradeButton businessId={business.id} planTier={tier} />}
+            </div>
           </div>
         ))}
       </div>
 
       <p className="mt-6 text-xs text-ink-muted">
-        Self-serve plan changes and live billing aren't turned on yet — to change your plan for now,
-        reach out directly and it'll be updated for you.
+        Payments are processed securely by Paystack. Your plan updates automatically the moment a
+        payment is confirmed.
       </p>
     </div>
   );
