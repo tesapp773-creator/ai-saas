@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserBusiness } from "@/lib/get-user-business";
 import { inviteTeamMember, removeTeamMember } from "@/lib/actions";
+import { PLANS, type PlanTier } from "@/lib/plans";
 
 export default async function TeamPage({
   searchParams,
@@ -11,6 +12,8 @@ export default async function TeamPage({
   const { user, business, role } = await getUserBusiness();
   if (!user) redirect("/login");
   if (!business) redirect("/onboarding");
+
+  const plan = PLANS[business.plan_tier as PlanTier];
 
   const supabase = createClient();
   const { data: members } = await supabase
@@ -39,25 +42,45 @@ export default async function TeamPage({
       )}
 
       {role === "owner" && (
-        <form action={inviteTeamMember} className="card mb-8 flex items-end gap-3 p-6">
-          <input type="hidden" name="business_id" value={business.id} />
-          <div className="flex-1">
-            <label className="field-label" htmlFor="invited_email">
-              Invite by email
-            </label>
-            <input
-              className="field-input"
-              id="invited_email"
-              name="invited_email"
-              type="email"
-              placeholder="staffmember@email.com"
-              required
-            />
-          </div>
-          <button type="submit" className="btn-primary">
-            Invite
-          </button>
-        </form>
+        <>
+          {plan.teamEnabled ? (
+            <form action={inviteTeamMember} className="card mb-8 flex items-end gap-3 p-6">
+              <input type="hidden" name="business_id" value={business.id} />
+              <div className="flex-1">
+                <label className="field-label" htmlFor="invited_email">
+                  Invite by email
+                </label>
+                <input
+                  className="field-input"
+                  id="invited_email"
+                  name="invited_email"
+                  type="email"
+                  placeholder="staffmember@email.com"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-primary">
+                Invite
+              </button>
+            </form>
+          ) : (
+            <div className="card mb-8 p-6">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="font-medium text-ink">Team accounts</span>
+                <span className="rounded-sm bg-gold-dim px-1.5 py-0.5 font-mono text-[10px] text-gold">
+                  Growth plan+
+                </span>
+              </div>
+              <p className="text-sm text-ink-muted">
+                Inviting staff is available on Growth and Business plans.{" "}
+                <a href="/dashboard/billing" className="underline underline-offset-2">
+                  Upgrade to unlock
+                </a>
+                .
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <ul className="space-y-3">
@@ -83,7 +106,7 @@ export default async function TeamPage({
         ))}
       </ul>
 
-      {role === "owner" && (
+      {role === "owner" && plan.teamEnabled && (
         <p className="mt-6 text-xs text-ink-muted">
           When they sign up using the exact email you invited, they're automatically added \u2014 no
           separate business setup on their end.
