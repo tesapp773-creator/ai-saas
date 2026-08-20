@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PLANS, type PlanTier } from "@/lib/plans";
 
 function slugify(name: string) {
   return (
@@ -261,6 +262,15 @@ export async function inviteTeamMember(formData: FormData) {
   const supabase = createClient();
   const businessId = String(formData.get("business_id"));
   const invitedEmail = String(formData.get("invited_email")).trim().toLowerCase();
+
+  // Server-side enforcement of the plan gate - the UI hides this form on Starter,
+  // but this check is what actually stops it, regardless of how the request arrives.
+  const { data: business } = await supabase.from("businesses").select("plan_tier").eq("id", businessId).single();
+  const plan = business ? PLANS[business.plan_tier as PlanTier] : null;
+
+  if (!plan?.teamEnabled) {
+    redirect(`/dashboard/team?error=${encodeURIComponent("Team accounts are available on Growth and Business plans.")}`);
+  }
 
   const { error } = await supabase.from("business_members").insert({
     business_id: businessId,
