@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserBusiness } from "@/lib/get-user-business";
 import { updateBusinessCustomization } from "@/lib/actions";
+import { PLANS, type PlanTier } from "@/lib/plans";
 import SubmitButton from "@/components/submit-button";
 import ImageUploadField from "./image-upload-field";
 import LinksManager from "./links-manager";
@@ -30,6 +31,8 @@ export default async function SettingsPage({
       </div>
     );
   }
+
+  const plan = PLANS[business.plan_tier as PlanTier];
 
   const supabase = createClient();
   const { data: links } = await supabase
@@ -72,14 +75,32 @@ export default async function SettingsPage({
           assetKind="avatar"
         />
 
-        <ImageUploadField
-          name="widget_wallpaper_url"
-          label="Chat wallpaper"
-          helpText="Background image for the chat itself, like a WhatsApp wallpaper."
-          defaultValue={business.widget_wallpaper_url}
-          userId={user.id}
-          assetKind="wallpaper"
-        />
+        {plan.wallpaperEnabled ? (
+          <ImageUploadField
+            name="widget_wallpaper_url"
+            label="Chat wallpaper"
+            helpText="Background image for the chat itself, like a WhatsApp wallpaper."
+            defaultValue={business.widget_wallpaper_url}
+            userId={user.id}
+            assetKind="wallpaper"
+          />
+        ) : (
+          <div className="rounded-sm border border-dashed border-line p-4">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="field-label mb-0">Chat wallpaper</span>
+              <span className="rounded-sm bg-gold-dim px-1.5 py-0.5 font-mono text-[10px] text-gold">
+                Growth plan+
+              </span>
+            </div>
+            <p className="text-xs text-ink-muted">
+              Custom wallpaper is available on Growth and Business plans.{" "}
+              <a href="/dashboard/billing" className="underline underline-offset-2">
+                Upgrade to unlock
+              </a>
+              .
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="field-label" htmlFor="widget_theme_color">
